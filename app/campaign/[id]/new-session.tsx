@@ -1,114 +1,109 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, Button, FlatList, Alert } from 'react-native';
+import { StyleSheet, View, Text, TextInput, FlatList, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
-import { Colors } from '../../../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../../constants/DesignTokens';
+import ClayCard from '../../../components/ui/ClayCard';
+import ClayButton from '../../../components/ui/ClayButton';
+import ClayTag from '../../../components/ui/ClayTag';
 import { createUTCDate } from '../../../utils/dateFormatting';
 
 export default function NewSessionScreen() {
   const { id: campaignId } = useLocalSearchParams();
   const [sessionTitle, setSessionTitle] = useState('');
-  // For MVP simplicity, we accept a raw date string or use a native abstraction.
-  // In a full build we'd use @react-native-community/datetimepicker
-  const [newDateStr, setNewDateStr] = useState(''); 
+  const [newDateStr, setNewDateStr] = useState('');
   const [proposedDates, setProposedDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
-
   const handleAddDate = () => {
     try {
-      // Basic validation for MVP format (YYYY-MM-DDTHH:MM)
       const parsedDate = new Date(newDateStr);
-      if (isNaN(parsedDate.getTime())) throw new Error("Invalid date");
-      
-      const utcString = createUTCDate(parsedDate);
-      setProposedDates([...proposedDates, utcString]);
+      if (isNaN(parsedDate.getTime())) throw new Error('Invalid date');
+      setProposedDates([...proposedDates, createUTCDate(parsedDate)]);
       setNewDateStr('');
-    } catch (e) {
-      Alert.alert('Invalid Date', 'Please enter a valid date/time format (e.g. 2026-05-01T18:00)');
+    } catch {
+      Alert.alert('Invalid Date', 'Please use format: YYYY-MM-DDTHH:MM');
     }
   };
 
   const handleCreateSession = async () => {
     if (!sessionTitle.trim() || proposedDates.length === 0) {
-      Alert.alert('Error', 'Please provide a title and at least one proposed date.');
+      Alert.alert('Missing Info', 'Please add a title and at least one proposed date.');
       return;
     }
-
     setLoading(true);
     try {
-      // 1. Insert Session
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
         .insert([{ campaign_id: campaignId, title: sessionTitle, status: 'polling' }])
-        .select()
-        .single();
-
+        .select().single();
       if (sessionError) throw sessionError;
-
-      // 2. Insert Proposed Dates (Poll Options)
-      const optionsToInsert = proposedDates.map(date => ({
-        session_id: sessionData.id,
-        proposed_time: date,
-      }));
 
       const { error: optionsError } = await supabase
         .from('poll_options')
-        .insert(optionsToInsert);
-
+        .insert(proposedDates.map(date => ({ session_id: sessionData.id, proposed_time: date })));
       if (optionsError) throw optionsError;
 
-      Alert.alert('Success', 'Session and poll created!');
+      Alert.alert('✅ Session Created', 'Players can now vote on their preferred date.');
       router.back();
     } catch (error: any) {
-      Alert.alert('Error creating session', error.message);
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.header, { color: theme.text }]}>Propose New Session</Text>
-      
-      <TextInput
-        style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-        placeholder="Session Title (e.g. Boss Fight)"
-        placeholderTextColor={theme.icon}
-        value={sessionTitle}
-        onChangeText={setSessionTitle}
-      />
+    <View style={styles.container}>
+      <Text style={styles.title}>Propose Session</Text>
+      <Text style={styles.subtitle}>Add a title and propose up to 5 dates for your players to vote on.</Text>
 
-      <View style={styles.addDateContainer}>
+      {/* Title input */}
+      <ClayCard variant="base" style={styles.section}>
+        <Text style={styles.label}>Session Title</Text>
         <TextInput
-          style={[styles.input, styles.flexInput, { borderColor: theme.border, color: theme.text }]}
-          placeholder="YYYY-MM-DDTHH:MM"
-          placeholderTextColor={theme.icon}
-          value={newDateStr}
-          onChangeText={setNewDateStr}
+          style={styles.input}
+          placeholder="e.g. The Dragon's Lair"
+          placeholderTextColor={Colors.periwinkleLight}
+          value={sessionTitle}
+          onChangeText={setSessionTitle}
         />
-        <Button title="Add Option" onPress={handleAddDate} color={theme.icon} />
-      </View>
+      </ClayCard>
 
-      <FlatList
-        data={proposedDates}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={[styles.dateOption, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={{ color: theme.text }}>{new Date(item).toLocaleString()}</Text>
+      {/* Date inputs */}
+      <ClayCard variant="base" style={styles.section}>
+        <Text style={styles.label}>Proposed Dates</Text>
+        <View style={styles.dateRow}>
+          <TextInput
+            style={[styles.input, styles.dateInput]}
+            placeholder="2026-05-01T19:00"
+            placeholderTextColor={Colors.periwinkleLight}
+            value={newDateStr}
+            onChangeText={setNewDateStr}
+          />
+          <ClayButton label="Add" variant="primary" onPress={handleAddDate} />
+        </View>
+
+        {proposedDates.length > 0 && (
+          <View style={styles.dateList}>
+            {proposedDates.map((date, i) => (
+              <View key={i} style={styles.dateItem}>
+                <Text style={styles.dateText}>{new Date(date).toLocaleString()}</Text>
+                <ClayTag label="Option" color="periwinkle" />
+              </View>
+            ))}
           </View>
         )}
-        style={styles.list}
-      />
+      </ClayCard>
 
-      <Button 
-        title="Create Session Poll" 
-        onPress={handleCreateSession} 
-        disabled={loading} 
-        color={theme.primary} 
+      {/* Submit */}
+      <ClayButton
+        label="Create Session Poll"
+        variant="primary"
+        onPress={handleCreateSession}
+        loading={loading}
+        disabled={!sessionTitle.trim() || proposedDates.length === 0}
+        fullWidth
       />
     </View>
   );
@@ -117,38 +112,62 @@ export default function NewSessionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    backgroundColor: Colors.cream,
+    padding: Spacing.lg,
+    gap: Spacing.md,
   },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
+  title: {
+    fontFamily: FontFamily.extrabold,
+    fontSize: FontSize.display,
+    color: Colors.ink,
+  },
+  subtitle: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.body,
+    color: Colors.ink,
+    opacity: 0.65,
+    lineHeight: 22,
+  },
+  section: {},
+  label: {
+    fontFamily: FontFamily.semibold,
+    fontSize: FontSize.subheading,
+    color: Colors.ink,
+    marginBottom: Spacing.sm,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 16,
+    backgroundColor: Colors.cream,
+    borderRadius: Radius.sm,
+    borderWidth: 1.5,
+    borderColor: Colors.mist,
+    padding: Spacing.md,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.body,
+    color: Colors.ink,
   },
-  addDateContainer: {
+  dateRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: Spacing.sm,
     alignItems: 'center',
-    marginBottom: 16,
   },
-  flexInput: {
+  dateInput: {
     flex: 1,
-    marginBottom: 0,
   },
-  list: {
-    flex: 1,
-    marginBottom: 16,
+  dateList: {
+    marginTop: Spacing.md,
+    gap: Spacing.xs,
   },
-  dateOption: {
-    padding: 16,
-    borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 8,
-  }
+  dateItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.mist,
+  },
+  dateText: {
+    fontFamily: FontFamily.semibold,
+    fontSize: FontSize.body,
+    color: Colors.ink,
+  },
 });

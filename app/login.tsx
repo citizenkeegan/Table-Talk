@@ -1,80 +1,79 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, TextInput, Button, Text, Alert } from 'react-native';
+import { StyleSheet, View, TextInput, Text } from 'react-native';
 import { signInWithEmail, signUpWithEmail } from '../lib/auth';
-import { Colors } from '../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../constants/DesignTokens';
 import { router } from 'expo-router';
+import ClayCard from '../components/ui/ClayCard';
+import ClayButton from '../components/ui/ClayButton';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const [error, setError] = useState('');
 
   const handleSignIn = async () => {
+    setError('');
     setLoading(true);
     try {
       await signInWithEmail(email, password);
       router.replace('/');
-    } catch (error: any) {
-      Alert.alert('Sign In Failed', error.message);
+    } catch (e: any) {
+      setError(e.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSignUp = async () => {
+    setError('');
     setLoading(true);
     try {
       await signUpWithEmail(email, password);
-      Alert.alert('Success', 'Check your email for the confirmation link.');
-    } catch (error: any) {
-      Alert.alert('Sign Up Failed', error.message);
+      setError('Check your email for the confirmation link!');
+    } catch (e: any) {
+      setError(e.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.header, { color: theme.text }]}>Organizer Login</Text>
-      
-      <View style={styles.inputContainer}>
+    <View style={styles.container}>
+      <Text style={styles.appTitle}>Table Talk</Text>
+      <Text style={styles.tagline}>Scheduling for tabletop adventurers.</Text>
+
+      <ClayCard variant="base" style={styles.card}>
+        <Text style={styles.cardTitle}>Organizer Sign In</Text>
+        <Text style={styles.cardSubtitle}>Log in to manage your campaigns and sessions.</Text>
+
+        <View style={{ height: Spacing.lg }} />
+
         <TextInput
-          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+          style={styles.input}
           placeholder="Email"
-          placeholderTextColor={theme.icon}
+          placeholderTextColor={Colors.periwinkleLight}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
         />
         <TextInput
-          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+          style={[styles.input, { marginTop: Spacing.sm }]}
           placeholder="Password"
-          placeholderTextColor={theme.icon}
+          placeholderTextColor={Colors.periwinkleLight}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
-      </View>
 
-      <View style={styles.buttonContainer}>
-        <Button 
-          title="Sign In" 
-          disabled={loading} 
-          onPress={handleSignIn} 
-          color={theme.primary} 
-        />
-        <View style={styles.spacer} />
-        <Button 
-          title="Sign Up" 
-          disabled={loading} 
-          onPress={handleSignUp} 
-          color={theme.icon} 
-        />
-      </View>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <View style={{ height: Spacing.lg }} />
+        <ClayButton label="Sign In" variant="primary" onPress={handleSignIn} loading={loading} fullWidth />
+        <View style={{ height: Spacing.sm }} />
+        <ClayButton label="Create Account" variant="secondary" onPress={handleSignUp} loading={loading} fullWidth />
+      </ClayCard>
     </View>
   );
 }
@@ -82,29 +81,54 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    backgroundColor: Colors.cream,
     justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
   },
-  header: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 32,
-    textAlign: 'center',
+  appTitle: {
+    fontFamily: FontFamily.extrabold,
+    fontSize: 40,
+    color: Colors.ink,
+    marginBottom: Spacing.xs,
   },
-  inputContainer: {
-    gap: 16,
-    marginBottom: 24,
+  tagline: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.subheading,
+    color: Colors.ink,
+    opacity: 0.6,
+    marginBottom: Spacing.xl,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 420,
+  },
+  cardTitle: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.heading,
+    color: Colors.ink,
+  },
+  cardSubtitle: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.body,
+    color: Colors.ink,
+    opacity: 0.6,
+    marginTop: Spacing.xs,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
+    backgroundColor: Colors.cream,
+    borderRadius: Radius.sm,
+    borderWidth: 1.5,
+    borderColor: Colors.mist,
+    padding: Spacing.md,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.body,
+    color: Colors.ink,
   },
-  buttonContainer: {
-    gap: 12,
-  },
-  spacer: {
-    height: 8,
+  error: {
+    marginTop: Spacing.sm,
+    fontFamily: FontFamily.semibold,
+    fontSize: FontSize.label,
+    color: Colors.urgent,
   },
 });

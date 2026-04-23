@@ -1,32 +1,21 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Colors } from '../../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { Platform } from 'react-native';
+import { Colors } from '../../constants/DesignTokens';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const theme = Colors[colorScheme ?? 'light'];
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.tint,
+        tabBarActiveTintColor: Colors.sage,
         headerShown: false,
-        tabBarStyle: { backgroundColor: theme.background, borderTopColor: theme.border },
+        // Hide the tab bar on web — single-tab app, nav lives in the header
+        tabBarStyle: Platform.OS === 'web'
+          ? { display: 'none' } as any
+          : { backgroundColor: Colors.whiteClay, borderTopColor: Colors.mist },
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Dashboard',
-        }}
-      />
-      {/* Hidden default expo route if it exists */}
-      <Tabs.Screen
-        name="explore"
-        options={{
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Dashboard' }} />
+      <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
   );
 }

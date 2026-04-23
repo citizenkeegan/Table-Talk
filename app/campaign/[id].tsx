@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Button, Share } from 'react-native';
+import { StyleSheet, View, Text, Share, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useGuestIdentity } from '../../hooks/useGuestIdentity';
 import { supabase } from '../../lib/supabase';
-import { Colors } from '../../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { Colors, FontFamily, FontSize, Spacing } from '../../constants/DesignTokens';
+import ClayCard from '../../components/ui/ClayCard';
+import ClayButton from '../../components/ui/ClayButton';
+import ClayTag from '../../components/ui/ClayTag';
 
 export default function CampaignScreen() {
   const { id } = useLocalSearchParams();
   const { identity } = useGuestIdentity();
   const [isOrganizer, setIsOrganizer] = useState(false);
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkOrganizer();
@@ -20,86 +21,114 @@ export default function CampaignScreen() {
   const checkOrganizer = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     setIsOrganizer(!!session?.user);
+    setLoading(false);
   };
 
   const handleShareInvite = async () => {
     try {
       const inviteUrl = `tabletalk://invite/${id}`;
-      await Share.share({
-        message: `Join our Table Talk campaign! Tap here: ${inviteUrl}`,
-      });
+      await Share.share({ message: `Join our Table Talk campaign! Tap here: ${inviteUrl}` });
     } catch (error: any) {
       console.error(error.message);
     }
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.header, { color: theme.text }]}>Campaign Dashboard</Text>
-      <Text style={[styles.text, { color: theme.icon }]}>Campaign ID: {id}</Text>
-      
-      {/* Sessions list placeholder for future implementation */}
-      <View style={styles.sessionsContainer}>
-        <Text style={[styles.subHeader, { color: theme.text }]}>Upcoming Sessions</Text>
-        <Text style={{ color: theme.icon }}>No active sessions yet.</Text>
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.sage} />
       </View>
+    );
+  }
 
-      {identity ? (
-        <Text style={[styles.text, { color: theme.tint, marginTop: 20 }]}>
-          Playing as Guest: {identity.name}
-        </Text>
-      ) : isOrganizer ? (
-        <View style={styles.organizerSection}>
-          <Text style={[styles.text, { color: theme.tint, marginBottom: 12 }]}>
-            Logged in as Organizer
-          </Text>
-          <Button 
-            title="Share Invite Link" 
-            onPress={handleShareInvite} 
-            color={theme.icon} 
-          />
-          <View style={{ height: 16 }} />
-          <Button 
-            title="Propose New Session" 
-            onPress={() => router.push(`/campaign/${id}/new-session`)} 
-            color={theme.primary} 
-          />
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <Text style={styles.title}>Campaign</Text>
+      <Text style={styles.subtitle}>ID: {id}</Text>
+
+      {/* Sessions placeholder */}
+      <ClayCard variant="base" style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
+          <ClayTag label="No Sessions" color="neutral" />
         </View>
-      ) : null}
-    </View>
+        <Text style={styles.emptyText}>No active sessions yet. Propose one to get started.</Text>
+      </ClayCard>
+
+      {/* Guest identity */}
+      {identity && (
+        <ClayCard variant="periwinkle" style={styles.section}>
+          <Text style={styles.sectionTitle}>Playing as Guest</Text>
+          <Text style={[styles.emptyText, { color: Colors.periwinkleDark, marginTop: 4 }]}>{identity.name}</Text>
+        </ClayCard>
+      )}
+
+      {/* Organizer controls */}
+      {isOrganizer && (
+        <ClayCard variant="sage" style={styles.section}>
+          <Text style={styles.sectionTitle}>Organizer Controls</Text>
+          <View style={styles.buttonGroup}>
+            <ClayButton
+              label="＋ Propose New Session"
+              variant="secondary"
+              onPress={() => router.push(`/campaign/${id}/new-session`)}
+              fullWidth
+            />
+            <ClayButton
+              label="🔗 Share Invite Link"
+              variant="secondary"
+              onPress={handleShareInvite}
+              fullWidth
+            />
+          </View>
+        </ClayCard>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    backgroundColor: Colors.cream,
+  },
+  content: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  title: {
+    fontFamily: FontFamily.extrabold,
+    fontSize: FontSize.display,
+    color: Colors.ink,
+  },
+  subtitle: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.body,
+    color: Colors.ink,
+    opacity: 0.5,
+    marginBottom: Spacing.md,
+  },
+  section: {},
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
+  sectionTitle: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.heading,
+    color: Colors.ink,
   },
-  subHeader: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
+  emptyText: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.body,
+    color: Colors.ink,
+    opacity: 0.6,
   },
-  text: {
-    fontSize: 16,
+  buttonGroup: {
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
   },
-  sessionsContainer: {
-    width: '100%',
-    marginTop: 32,
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E6E8EB', // Fallback
-  },
-  organizerSection: {
-    marginTop: 32,
-    alignItems: 'center',
-    width: '100%',
-  }
 });

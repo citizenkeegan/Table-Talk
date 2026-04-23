@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text } from 'react-native';
-import { Colors } from '../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../constants/DesignTokens';
+import ClayTag from './ui/ClayTag';
 
 export interface Message {
   id: string;
@@ -19,38 +19,36 @@ interface ChatMessageProps {
 }
 
 export default function ChatMessage({ message, isOwnMessage }: ChatMessageProps) {
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
-
-  const timeString = new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const timeString = new Date(message.created_at).toLocaleTimeString([], {
+    hour: '2-digit', minute: '2-digit',
+  });
 
   return (
-    <View style={[styles.container, isOwnMessage ? styles.ownContainer : styles.otherContainer]}>
+    <View style={[styles.container, isOwnMessage ? styles.own : styles.other]}>
       {!isOwnMessage && (
-        <Text style={[styles.nameText, { color: theme.icon }]}>{message.user_name}</Text>
+        <Text style={styles.name}>{message.user_name}</Text>
       )}
-      
+
       <View style={[
-        styles.bubble, 
-        isOwnMessage ? { backgroundColor: theme.tint } : { backgroundColor: theme.card },
-        message.is_urgent && styles.urgentBubble
+        styles.bubble,
+        isOwnMessage ? styles.ownBubble : styles.otherBubble,
+        message.is_urgent && styles.urgentBubble,
       ]}>
         {message.is_urgent && (
-          <View style={styles.urgentHeader}>
-            <Text style={styles.urgentHeaderText}>⚠️ URGENT</Text>
+          <View style={{ marginBottom: 6 }}>
+            <ClayTag label="⚠️ URGENT" color="urgent" />
           </View>
         )}
-        
         <Text style={[
-          styles.messageText, 
-          isOwnMessage ? { color: '#fff' } : { color: theme.text },
-          message.is_urgent && { color: '#991b1b', fontWeight: '500' }
+          styles.text,
+          isOwnMessage && !message.is_urgent ? { color: Colors.ink } : { color: Colors.ink },
+          message.is_urgent && styles.urgentText,
         ]}>
           {message.content}
         </Text>
       </View>
-      
-      <Text style={[styles.timeText, { color: theme.icon }]}>{timeString}</Text>
+
+      <Text style={styles.time}>{timeString}</Text>
     </View>
   );
 }
@@ -60,43 +58,53 @@ const styles = StyleSheet.create({
     marginVertical: 4,
     maxWidth: '85%',
   },
-  ownContainer: {
+  own: {
     alignSelf: 'flex-end',
     alignItems: 'flex-end',
   },
-  otherContainer: {
+  other: {
     alignSelf: 'flex-start',
     alignItems: 'flex-start',
   },
-  nameText: {
-    fontSize: 12,
+  name: {
+    fontFamily: FontFamily.semibold,
+    fontSize: FontSize.label,
+    color: Colors.periwinkle,
     marginBottom: 4,
     marginLeft: 4,
   },
   bubble: {
-    padding: 12,
-    borderRadius: 16,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+  },
+  ownBubble: {
+    backgroundColor: Colors.sageLight,
+    borderColor: Colors.sageDark,
+  },
+  otherBubble: {
+    backgroundColor: Colors.whiteClay,
+    borderColor: Colors.mist,
   },
   urgentBubble: {
-    backgroundColor: '#fee2e2',
-    borderWidth: 1,
-    borderColor: '#f87171',
+    backgroundColor: Colors.urgentBg,
+    borderColor: Colors.urgent,
   },
-  urgentHeader: {
-    marginBottom: 4,
-  },
-  urgentHeaderText: {
-    color: '#dc2626',
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
-  messageText: {
-    fontSize: 15,
+  text: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.body,
     lineHeight: 20,
   },
-  timeText: {
+  urgentText: {
+    color: Colors.urgent,
+    fontFamily: FontFamily.semibold,
+  },
+  time: {
+    fontFamily: FontFamily.regular,
     fontSize: 10,
-    marginTop: 4,
+    color: Colors.ink,
+    opacity: 0.5,
+    marginTop: 3,
     marginHorizontal: 4,
-  }
+  },
 });

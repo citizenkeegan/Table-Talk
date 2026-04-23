@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, Button, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TextInput, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useGuestIdentity } from '../../hooks/useGuestIdentity';
 import { supabase } from '../../lib/supabase';
-import { Colors } from '../../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../constants/DesignTokens';
+import ClayCard from '../../components/ui/ClayCard';
+import ClayButton from '../../components/ui/ClayButton';
 
 export default function CampaignInviteScreen() {
   const { campaignId } = useLocalSearchParams();
@@ -12,9 +13,7 @@ export default function CampaignInviteScreen() {
   const [displayName, setDisplayName] = useState('');
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isOrganizer, setIsOrganizer] = useState(false);
-  
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -22,68 +21,64 @@ export default function CampaignInviteScreen() {
 
   const checkUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      setIsOrganizer(true);
-    }
+    if (session?.user) setIsOrganizer(true);
     setCheckingAuth(false);
   };
 
   const handleJoinAsGuest = async () => {
     if (!displayName.trim()) return;
+    setLoading(true);
     await saveIdentity(displayName.trim());
-    // Proceed to the campaign dashboard/voting screen
     router.replace(`/campaign/${campaignId}`);
   };
 
   if (checkingAuth || guestLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.tint} />
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={Colors.sage} />
       </View>
     );
   }
 
-  // If they are an organizer OR they already have a guest identity, redirect them to the campaign.
-  // In a real app, you might want to ask the organizer if they want to join this campaign,
-  // or add the campaign to their account. For now, we redirect to the campaign view.
   if (isOrganizer || identity) {
-    // Optionally redirect immediately or show a "Continue as {name}" button
     router.replace(`/campaign/${campaignId}`);
     return null;
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.header, { color: theme.text }]}>You've been invited!</Text>
-      <Text style={[styles.subHeader, { color: theme.icon }]}>
+    <View style={styles.container}>
+      {/* Header */}
+      <Text style={styles.emoji}>🎲</Text>
+      <Text style={styles.title}>You've been invited!</Text>
+      <Text style={styles.subtitle}>
         Join the campaign to view schedules and vote on the next session. No account required.
       </Text>
 
-      <View style={styles.card}>
-        <Text style={[styles.label, { color: theme.text }]}>What should we call you?</Text>
+      {/* Form Card */}
+      <ClayCard variant="base" style={styles.card}>
+        <Text style={styles.label}>What should we call you?</Text>
         <TextInput
-          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+          style={styles.input}
           placeholder="e.g. Grog Strongjaw"
-          placeholderTextColor={theme.icon}
+          placeholderTextColor={Colors.periwinkleLight}
           value={displayName}
           onChangeText={setDisplayName}
+          autoFocus
         />
-        <Button 
-          title="Join Campaign" 
-          disabled={!displayName.trim()} 
+        <ClayButton
+          label="Join Campaign →"
+          variant="primary"
           onPress={handleJoinAsGuest}
-          color={theme.primary}
+          disabled={!displayName.trim()}
+          loading={loading}
+          fullWidth
         />
-      </View>
+      </ClayCard>
 
+      {/* Organizer link */}
       <View style={styles.loginPrompt}>
-        <Text style={{ color: theme.icon }}>Are you the organizer? </Text>
-        <Text 
-          style={[styles.link, { color: theme.tint }]} 
-          onPress={() => router.push('/login')}
-        >
-          Sign In
-        </Text>
+        <Text style={styles.promptText}>Are you the organizer? </Text>
+        <Text style={styles.link} onPress={() => router.push('/login')}>Sign In</Text>
       </View>
     </View>
   );
@@ -92,44 +87,66 @@ export default function CampaignInviteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    backgroundColor: Colors.cream,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: Spacing.xl,
   },
-  header: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
+  emoji: {
+    fontSize: 56,
+    marginBottom: Spacing.sm,
   },
-  subHeader: {
-    fontSize: 16,
+  title: {
+    fontFamily: FontFamily.extrabold,
+    fontSize: FontSize.display,
+    color: Colors.ink,
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: Spacing.sm,
+  },
+  subtitle: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.subheading,
+    color: Colors.ink,
+    opacity: 0.65,
+    textAlign: 'center',
     lineHeight: 24,
     maxWidth: 400,
+    marginBottom: Spacing.xl,
   },
   card: {
     width: '100%',
-    maxWidth: 400,
-    gap: 16,
+    maxWidth: 420,
+    gap: Spacing.md,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontFamily: FontFamily.semibold,
+    fontSize: FontSize.subheading,
+    color: Colors.ink,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 8,
+    backgroundColor: Colors.cream,
+    borderRadius: Radius.sm,
+    borderWidth: 1.5,
+    borderColor: Colors.mist,
+    padding: Spacing.md,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.body,
+    color: Colors.ink,
   },
   loginPrompt: {
     flexDirection: 'row',
-    marginTop: 32,
+    marginTop: Spacing.xl,
+    alignItems: 'center',
+  },
+  promptText: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.body,
+    color: Colors.ink,
+    opacity: 0.6,
   },
   link: {
-    fontWeight: 'bold',
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.body,
+    color: Colors.periwinkle,
   },
 });
